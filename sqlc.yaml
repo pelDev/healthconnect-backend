@@ -1,0 +1,23 @@
+version: "2"
+sql:
+  - schema: "internal/infrastructure/postgres/migrations"
+    queries: "internal/infrastructure/postgres/queries"
+    engine: "postgresql"
+    gen:
+      go:
+        package: "sqlc"
+        out: "internal/infrastructure/postgres/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_prepared_queries: true
+        emit_interface: true
+        emit_exact_table_names: false
+        emit_empty_slices: true
+        json_tags_case_style: "camel"
+        overrides:
+          - db_type: "timestamptz"
+            go_type: "time.Time"
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "jsonb"
+            go_type: "encoding/json.RawMessage"
