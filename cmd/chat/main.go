@@ -24,14 +24,16 @@ func main() {
 
 	inMemorySessionStore := sessionstore.NewInMemSessionStore()
 
-	chatUseCase := usecases.NewSendChatUseCase(geminiAdapter, inMemorySessionStore)
+	chatUseCase := usecases.NewSendChatUseCase(geminiAdapter, inMemorySessionStore, inMemorySessionStore)
 
 	sessionID := uuid.New()
+	vid := uuid.New()
 
 	fmt.Println("╔══════════════════════════════════════╗")
 	fmt.Println("║     HealthConnect — Chat Test CLI    ║")
 	fmt.Println("╚══════════════════════════════════════╝")
 	fmt.Printf("Session ID : %s\n", sessionID)
+	fmt.Printf("Visitor ID : %s\n", vid)
 	fmt.Println("Type your message and press Enter. Use Ctrl+C or type 'exit' to quit.")
 	fmt.Println(strings.Repeat("─", 42))
 
@@ -52,7 +54,7 @@ func main() {
 			break
 		}
 
-		response, err := chatUseCase.Execute(ctx, sessionID, input)
+		response, err := chatUseCase.Execute(ctx, sessionID, input, vid)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			continue

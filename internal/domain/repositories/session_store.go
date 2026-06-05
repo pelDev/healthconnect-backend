@@ -1,4 +1,4 @@
-package ports
+package repositories
 
 import (
 	"github.com/google/uuid"
@@ -6,6 +6,7 @@ import (
 )
 
 type SessionStorage interface {
-	GetOrCreateSession(sessionID uuid.UUID) []models.Message
+	CreateSession(sessionID uuid.UUID, vid uuid.UUID, ref *string) (*models.Session, error)
+	GetSession(sessionID uuid.UUID) (*models.Session, error)
 	Append(sessionID uuid.UUID, msgs ...models.Message) error
 }

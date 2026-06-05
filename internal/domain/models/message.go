@@ -11,9 +11,10 @@ const (
 )
 
 type Message struct {
-	ID       uuid.UUID
-	Role     MessageRole
-	Content  string
-	DoctorID *uuid.UUID
-	VID      *uuid.UUID // Acts as user identifier
+	ID        uuid.UUID
+	SessionID uuid.UUID
+	Role      MessageRole
+	Content   string
+	DoctorID  *uuid.UUID
+	VID       *uuid.UUID // Acts as user identifier
 }
