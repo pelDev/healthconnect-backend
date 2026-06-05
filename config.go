@@ -26,13 +26,17 @@ type Config struct {
 	RedisDb           int           `mapstructure:"redis_db"`
 	EventSvcUrl       string        `mapstructure:"event_svc_url"`
 
-	AiMaxTokens int
+	AiMaxTokens int `mapstructure:"ai_max_tokens"`
 
 	ClaudeModel  string
 	ClaudeApiKey string
 
 	GeminiApiKey string `mapstructure:"gemini_api_key"`
 	GeminiModel  string `mapstructure:"gemini_model"`
+
+	AethexBaseUrl string  `mapstructure:"aethex_base_url"`
+	AethexApiKey  string  `mapstructure:"aethex_api_key"`
+	AethexAgentId *string `mapstructure:"aethex_agent_id"`
 }
 
 func LoadConfig() Config {
