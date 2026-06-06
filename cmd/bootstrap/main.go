@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -48,13 +49,144 @@ type Agent struct {
 	UpdatedAt            time.Time              `json:"updated_at"`
 }
 
+type CreateAgentToolReq struct {
+	Name             string            `json:"name,required" validate:"required,lowercase,regexp=^[a-z0-9_]+$"`
+	Description      string            `json:"description,omitempty"`
+	ParametersSchema map[string]any    `json:"parameters_schema,omitempty"`
+	EndpointURL      string            `json:"endpoint_url,required" validate:"required,url,https"`
+	Headers          map[string]string `json:"headers,omitempty"`
+	ToolType         string            `json:"tool_type,omitempty"` // default: "function"
+}
+
+var CreateFuncRequests = []CreateAgentToolReq{
+	CreateAgentToolReq{
+		Name: "trigger_emergency_alert",
+		Description: `Call this immediately when the user mentions any life-threatening condition:
+chest pain, difficulty breathing, severe bleeding, stroke symptoms (face drooping,
+arm weakness, slurred speech), loss of consciousness, or suicidal thoughts.
+Do not ask follow-up questions first. Call this before saying anything else.`,
+		ParametersSchema: map[string]any{},
+		EndpointURL:      "https://097e-154-113-67-70.ngrok-free.app/v1/aethex/function/trigger_emergency_alert",
+		Headers:          map[string]string{},
+		ToolType:         "function",
+	},
+	CreateAgentToolReq{
+		Name: "refer_to_doctor",
+		Description: `Call this when the user has symptoms that may require medication or a prescription.
+First gather symptoms through natural follow-up questions, one at a time.
+Once you have a complete picture and the user confirms, call this function.
+Do not suggest any medication or dosage yourself.`,
+		ParametersSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"symptoms": map[string]string{
+					"type":        "string",
+					"description": "array of symptom strings collected from the conversation",
+				},
+				"summary": map[string]string{
+					"type":        "string",
+					"description": "a short plain-English description of the case",
+				},
+			},
+			"required": []string{"symptoms", "summary"},
+		},
+		EndpointURL: "https://097e-154-113-67-70.ngrok-free.app/v1/aethex/function/refer_to_doctor",
+		Headers:     map[string]string{},
+		ToolType:    "function",
+	},
+}
+
 func main() {
 	cfg := config.LoadConfig()
 
-	client := http.Client{
+	client := &http.Client{
 		Timeout: 20 * time.Second,
 	}
 
+	// Create data directory if it doesn't exist
+	dataDir := "data"
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		log.Panicln(fmt.Errorf("failed to create data directory: %w", err))
+	}
+
+	// Check if agent.json already exists
+	agentFilePath := filepath.Join(dataDir, "agent.json")
+	if _, err := os.Stat(agentFilePath); os.IsNotExist(err) {
+		// Call your function here
+		setupAgent(client, &cfg, dataDir, agentFilePath)
+	} else if err != nil {
+		// Handle other errors (e.g., permission issues)
+		log.Panicln(fmt.Errorf("failed to check agent.json existence: %w", err))
+	}
+
+	// Get AgentID
+	agentID, err := getAgentID(dataDir)
+	if err != nil {
+		log.Panicln(fmt.Errorf("failed to get agent ID: %w", err))
+	}
+
+	// Check if functions.json exists and create/update as needed
+	functionsFilePath := filepath.Join(dataDir, "functions.json")
+
+	var existingFunctions []CreateAgentToolReq
+
+	// Read existing functions if file exists
+	if _, err := os.Stat(functionsFilePath); err == nil {
+		data, err := os.ReadFile(functionsFilePath)
+		if err != nil {
+			log.Panicln(fmt.Errorf("failed to read functions.json: %w", err))
+		}
+
+		if err := json.Unmarshal(data, &existingFunctions); err != nil {
+			log.Panicln(fmt.Errorf("failed to parse functions.json: %w", err))
+		}
+	} else if !os.IsNotExist(err) {
+		log.Panicln(fmt.Errorf("failed to check functions.json existence: %w", err))
+	}
+
+	// Create a map of existing function names for easy lookup
+	existingFuncMap := make(map[string]bool)
+	for _, fn := range existingFunctions {
+		existingFuncMap[fn.Name] = true
+	}
+
+	// Track which functions need to be created
+	var functionsToCreate []CreateAgentToolReq
+	for _, functionReq := range CreateFuncRequests {
+		if !existingFuncMap[functionReq.Name] {
+			functionsToCreate = append(functionsToCreate, functionReq)
+		}
+	}
+
+	if len(functionsToCreate) > 0 {
+		for _, functionReq := range CreateFuncRequests {
+			// Call your API to create the function/tool for the agent
+			if err := createAgentTool(client, &cfg, agentID, functionReq); err != nil {
+				log.Panicln(fmt.Errorf("failed to create tool %s: %w", functionReq.Name, err))
+			}
+			log.Printf("Successfully created tool: %s", functionReq.Name)
+
+			// Append to existing functions list
+			existingFunctions = append(existingFunctions, functionReq)
+		}
+
+		// Save updated functions list back to functions.json
+		updatedData, err := json.MarshalIndent(existingFunctions, "", "  ")
+		if err != nil {
+			log.Panicln(fmt.Errorf("failed to marshal functions: %w", err))
+		}
+
+		if err := os.WriteFile(functionsFilePath, updatedData, 0644); err != nil {
+			log.Panicln(fmt.Errorf("failed to write functions.json: %w", err))
+		}
+
+		log.Printf("Successfully updated functions.json with %d new function(s)", len(functionsToCreate))
+	} else {
+		log.Println("All functions already exist, nothing to create")
+	}
+}
+
+func setupAgent(client *http.Client, cfg *config.Config, dataDir, agentFilePath string) {
 	voicesUrl := fmt.Sprintf("%s/voices?language=english&country=NG&limit=5", cfg.AethexBaseUrl)
 
 	req, err := http.NewRequest("GET", voicesUrl, nil)
@@ -90,7 +222,7 @@ func main() {
 		"system_prompt":            ai.SystemPromptVoice,
 		"voice_id":                 voice.ID,
 		"first_message":            "Hi, my name is Ase, your AI Health First Responser. How can I help you today?",
-		"dialect_style":            "local",
+		"dialect_style":            "formal",
 		"max_tokens":               cfg.AiMaxTokens,
 		"silence_timeout_seconds":  60,
 		"idle_check_in_after_secs": 15,
@@ -125,20 +257,6 @@ func main() {
 		log.Panicln(fmt.Errorf("failed to decode agent response: %w", err))
 	}
 
-	// Create data directory if it doesn't exist
-	dataDir := "data"
-	if err := os.MkdirAll(dataDir, 0755); err != nil {
-		log.Panicln(fmt.Errorf("failed to create data directory: %w", err))
-	}
-
-	// Check if agent.json already exists
-	agentFilePath := filepath.Join(dataDir, "agent.json")
-	if _, err := os.Stat(agentFilePath); err == nil {
-		log.Panicln(fmt.Errorf("file already exists: %s. Refusing to overwrite", agentFilePath))
-	} else if !os.IsNotExist(err) {
-		log.Panicln(fmt.Errorf("failed to check file existence: %w", err))
-	}
-
 	// Save agent data to JSON file with pretty formatting
 	agentJSON, err := json.MarshalIndent(agent, "", "  ")
 	if err != nil {
@@ -152,11 +270,6 @@ func main() {
 	log.Printf("Successfully created agent '%s' (ID: %s) and saved to %s\n", agent.Name, agent.ID, agentFilePath)
 }
 
-func setAethexHeaders(req *http.Request, apiKey string) {
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-API-Key", apiKey)
-}
-
 func getLastFemaleVoice(voices VoicesResponse) (*Voice, error) {
 	for i := len(voices) - 1; i >= 0; i-- {
 		if voices[i].Gender == "female" {
@@ -164,4 +277,57 @@ func getLastFemaleVoice(voices VoicesResponse) (*Voice, error) {
 		}
 	}
 	return nil, fmt.Errorf("no female voices found")
+}
+
+// Helper function to get agent ID from agent.json
+func getAgentID(dataDir string) (string, error) {
+	agentFilePath := filepath.Join(dataDir, "agent.json")
+	data, err := os.ReadFile(agentFilePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read agent.json: %w", err)
+	}
+
+	var agentData struct {
+		ID string `json:"id"`
+	}
+
+	if err := json.Unmarshal(data, &agentData); err != nil {
+		return "", fmt.Errorf("failed to parse agent.json: %w", err)
+	}
+
+	return agentData.ID, nil
+}
+
+// Placeholder for createAgentTool function - implement based on your API
+func createAgentTool(client *http.Client, cfg *config.Config, agentID string, toolReq CreateAgentToolReq) error {
+	url := fmt.Sprintf("%s/agents/%s/tools", cfg.AethexBaseUrl, agentID)
+
+	body, err := json.Marshal(toolReq)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+
+	setAethexHeaders(req, cfg.AethexApiKey)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 201 {
+		return errors.New(fmt.Sprintf("failed to create agent %d", resp.StatusCode))
+	}
+
+	return nil
+}
+
+func setAethexHeaders(req *http.Request, apiKey string) {
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-API-Key", apiKey)
 }
