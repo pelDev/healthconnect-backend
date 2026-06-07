@@ -14,6 +14,7 @@ import (
 type Querier interface {
 	CreateSession(ctx context.Context, arg CreateSessionParams) error
 	DeleteAuthSessionByID(ctx context.Context, id uuid.UUID) error
+	DeleteSessionByID(ctx context.Context, id uuid.UUID) error
 	DeleteUserByID(ctx context.Context, id uuid.UUID) error
 	GetAuthSessionByID(ctx context.Context, id uuid.UUID) (AuthSession, error)
 	GetAuthSessionByUserID(ctx context.Context, userID uuid.UUID) ([]AuthSession, error)
