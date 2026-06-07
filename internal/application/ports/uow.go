@@ -8,6 +8,8 @@ import (
 
 type UnitOfWork interface {
 	UserRepo() repositories.UserStorage
+	AuthSessionRepo() repositories.AuthSessionStorage
+
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
 }

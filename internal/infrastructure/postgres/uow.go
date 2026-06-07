@@ -12,10 +12,15 @@ import (
 )
 
 type PostgresUoW struct {
-	tx          pgx.Tx
-	userStorage repositories.UserStorage
+	tx                 pgx.Tx
+	userStorage        repositories.UserStorage
+	authSessionStorage repositories.AuthSessionStorage
 
 	done bool
+}
+
+func (u *PostgresUoW) AuthSessionRepo() repositories.AuthSessionStorage {
+	return u.authSessionStorage
 }
 
 func (u *PostgresUoW) UserRepo() repositories.UserStorage {
@@ -45,7 +50,8 @@ func NewPostgresUoW(ctx context.Context, db *pgxpool.Pool) (application_ports.Un
 	}
 
 	return &PostgresUoW{
-		tx:          tx,
-		userStorage: postgres_repos.NewUserStorage(sqlc.New(tx)),
+		tx:                 tx,
+		userStorage:        postgres_repos.NewUserStorage(sqlc.New(tx)),
+		authSessionStorage: postgres_repos.NewAuthSessionStorage(sqlc.New(tx)),
 	}, nil
 }
