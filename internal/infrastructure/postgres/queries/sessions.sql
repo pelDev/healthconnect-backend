@@ -10,3 +10,6 @@ SELECT * FROM sessions WHERE id = $1;
 
 -- name: GetSessionByReference :one
 SELECT * FROM sessions WHERE reference = $1;
+
+-- name: DeleteSessionByID :exec
+DELETE FROM sessions WHERE id = $1; -- ASK: I think this should be a soft delete with a 30 days cleanup
