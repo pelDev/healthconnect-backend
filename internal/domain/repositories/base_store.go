@@ -8,6 +8,6 @@ import (
 
 type Storage[T any] interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*T, error)
-	Create(ctx context.Context, entity *T) error
+	Save(ctx context.Context, entity *T) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }

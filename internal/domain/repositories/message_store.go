@@ -7,4 +7,5 @@ import (
 
 type MessageStorage interface {
 	GetMessagesBySession(sessionID uuid.UUID) ([]models.Message, error)
+	Append(sessionID uuid.UUID, msgs ...models.Message) error
 }

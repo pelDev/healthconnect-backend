@@ -66,7 +66,7 @@ func (u *sendChatUseCase) Execute(ctx context.Context, sessionID uuid.UUID, mess
 	}
 
 	// Persist both turns
-	err = u.sessionStore.Append(sessionID, userMsg, assistantMsg)
+	err = u.messageStore.Append(sessionID, userMsg, assistantMsg)
 	if err != nil {
 		return nil, err
 	}
