@@ -16,6 +16,10 @@ type AuthSession struct {
 	IsRevoked bool
 }
 
+func (s *AuthSession) Revoke() {
+	s.IsRevoked = true
+}
+
 func NewAuthSession(userId uuid.UUID) AuthSession {
 	return AuthSession{
 		ID:        uuid.New(),

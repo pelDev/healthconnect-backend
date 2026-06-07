@@ -77,6 +77,8 @@ INSERT INTO auth_sessions (
 ) VALUES (
     $1, $2, $3, $4, $5
 )
+ON CONFLICT (id) DO UPDATE SET
+    is_revoked = EXCLUDED.is_revoked
 `
 
 type UpsertAuthSessionParams struct {
