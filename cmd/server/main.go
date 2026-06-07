@@ -72,6 +72,7 @@ func main() {
 
 	authSessionStore := postgres_repos.NewAuthSessionStorage(queries)
 	userStorage := postgres_repos.NewUserStorage(queries)
+	sessionStorage := postgres_repos.NewSessionStore(queries)
 
 	client := &http.Client{
 		Timeout: 20 * time.Second,
@@ -97,7 +98,7 @@ func main() {
 	// Http Router
 	router := http_interface.NewRouter(
 		uowFactory,
-		inMemorySessionStore,
+		sessionStorage,
 		inMemorySessionStore,
 		authSessionStore,
 		userStorage,

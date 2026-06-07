@@ -9,9 +9,14 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	config "github.com/pelDev/health-connect"
+	application_ports "github.com/pelDev/health-connect/internal/application/ports"
 	"github.com/pelDev/health-connect/internal/application/usecases"
 	"github.com/pelDev/health-connect/internal/infrastructure/ai"
+	db "github.com/pelDev/health-connect/internal/infrastructure/postgres"
+	postgres_repos "github.com/pelDev/health-connect/internal/infrastructure/postgres/repositories"
+	"github.com/pelDev/health-connect/internal/infrastructure/postgres/sqlc"
 	sessionstore "github.com/pelDev/health-connect/internal/infrastructure/session_store"
 )
 
@@ -20,11 +25,48 @@ func main() {
 
 	ctx := context.Background()
 
+	// Create connection pool config
+	poolConfig, err := pgxpool.ParseConfig(cfg.GetDSN())
+	if err != nil {
+		log.Fatal("Failed to parse DSN:", err)
+		return
+	}
+
+	// Configure connection pool
+	maxConns, minConns, maxLifetime, maxIdleTime := cfg.GetDBPoolConfig()
+	poolConfig.MaxConns = maxConns
+	poolConfig.MinConns = minConns
+	poolConfig.MaxConnLifetime = maxLifetime
+	poolConfig.MaxConnIdleTime = maxIdleTime
+
+	// Create connection pool
+	connection, err := pgxpool.NewWithConfig(ctx, poolConfig)
+	if err != nil {
+		log.Fatal("Can't create database pool:", err)
+		return
+	}
+
+	// Ping database
+	if err := connection.Ping(ctx); err != nil {
+		log.Fatal("Can't connect to database:", err)
+		return
+	}
+
+	log.Println("Database connection established")
+
+	uowFactory := func(ctx context.Context) (application_ports.UnitOfWork, error) {
+		return db.NewPostgresUoW(ctx, connection)
+	}
+
+	queries := sqlc.New(connection)
+
+	sessionStore := postgres_repos.NewSessionStore(queries)
+
 	geminiAdapter := ai.NewGeminiAdapter(cfg.AiMaxTokens, cfg.GeminiModel, cfg.GeminiApiKey, ctx)
 
 	inMemorySessionStore := sessionstore.NewInMemSessionStore()
 
-	chatUseCase := usecases.NewSendChatUseCase(geminiAdapter, inMemorySessionStore, inMemorySessionStore)
+	chatUseCase := usecases.NewSendChatUseCase(geminiAdapter, sessionStore, uowFactory, inMemorySessionStore)
 
 	sessionID := uuid.New()
 	vid := uuid.New()

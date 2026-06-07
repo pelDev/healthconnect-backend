@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -17,11 +18,16 @@ import (
 
 type voiceHandler struct {
 	voiceChatAdapter application_ports.VoiceChatAdapter
+	uowFactory       func(ctx context.Context) (application_ports.UnitOfWork, error)
 	sessionStore     repositories.SessionStorage
 }
 
-func NewVoiceHandler(voiceChatAdapter application_ports.VoiceChatAdapter, sessionStore repositories.SessionStorage) *voiceHandler {
-	return &voiceHandler{voiceChatAdapter: voiceChatAdapter, sessionStore: sessionStore}
+func NewVoiceHandler(
+	voiceChatAdapter application_ports.VoiceChatAdapter,
+	sessionStore repositories.SessionStorage,
+	uowFactory func(ctx context.Context) (application_ports.UnitOfWork, error),
+) *voiceHandler {
+	return &voiceHandler{voiceChatAdapter: voiceChatAdapter, sessionStore: sessionStore, uowFactory: uowFactory}
 }
 
 func (h *voiceHandler) InitializeCall(w http.ResponseWriter, r *http.Request) {
@@ -33,7 +39,7 @@ func (h *voiceHandler) InitializeCall(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	usecase := usecases.NewInitializeVoiceChatUseCase(h.voiceChatAdapter, h.sessionStore)
+	usecase := usecases.NewInitializeVoiceChatUseCase(h.voiceChatAdapter, h.uowFactory)
 
 	res, err := usecase.Execute(r.Context(), *vid)
 	if err != nil {
@@ -65,7 +71,7 @@ func (h *voiceHandler) ExchangeOffer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session, err := h.sessionStore.GetSession(requestedSessionID)
+	session, err := h.sessionStore.FindByID(r.Context(), requestedSessionID)
 	if err != nil || session == nil || session.Reference == nil {
 		http.Error(w, "invalid sessionID", http.StatusBadRequest)
 		return
