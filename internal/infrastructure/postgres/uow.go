@@ -7,17 +7,19 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	application_ports "github.com/pelDev/health-connect/internal/application/ports"
 	"github.com/pelDev/health-connect/internal/domain/repositories"
+	postgres_repos "github.com/pelDev/health-connect/internal/infrastructure/postgres/repositories"
+	"github.com/pelDev/health-connect/internal/infrastructure/postgres/sqlc"
 )
 
 type PostgresUoW struct {
-	tx pgx.Tx
+	tx          pgx.Tx
+	userStorage repositories.UserStorage
 
 	done bool
 }
 
-// UserRepo implements application_ports.UnitOfWork.
 func (u *PostgresUoW) UserRepo() repositories.UserStorage {
-	panic("unimplemented")
+	return u.userStorage
 }
 
 func (u *PostgresUoW) Commit(ctx context.Context) error {
@@ -43,6 +45,7 @@ func NewPostgresUoW(ctx context.Context, db *pgxpool.Pool) (application_ports.Un
 	}
 
 	return &PostgresUoW{
-		tx: tx,
+		tx:          tx,
+		userStorage: postgres_repos.NewUserStorage(sqlc.New(tx)),
 	}, nil
 }

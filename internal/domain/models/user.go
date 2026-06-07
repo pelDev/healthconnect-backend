@@ -18,7 +18,7 @@ type User struct {
 	Password  string
 }
 
-func NewUser(firstName, lastName, email string, avatar *string, rawPassword string) (User, error) {
+func NewUser(firstName, lastName, email string, rawPassword string) (User, error) {
 	now := time.Now().UTC()
 	hashed, err := HashPassword(rawPassword)
 	if err != nil {
