@@ -210,7 +210,7 @@ func setupAgent(client *http.Client, cfg *config.Config, dataDir, agentFilePath 
 	var voices VoicesResponse
 	json.NewDecoder(resp.Body).Decode(&voices)
 
-	voice, err := getLastFemaleVoice(voices)
+	voice, err := getLastMaleVoice(voices)
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -218,10 +218,10 @@ func setupAgent(client *http.Client, cfg *config.Config, dataDir, agentFilePath 
 	createAgentUrl := fmt.Sprintf("%s/agents", cfg.AethexBaseUrl)
 
 	createAgentPayload := map[string]interface{}{
-		"name":                     "Ase",
+		"name":                     "John",
 		"system_prompt":            ai.SystemPromptVoice,
 		"voice_id":                 voice.ID,
-		"first_message":            "Hi, my name is Ase, your AI Health First Responser. How can I help you today?",
+		"first_message":            "Hi, my name is John, your AI Health First Responder. How can I help you today?",
 		"dialect_style":            "formal",
 		"max_tokens":               cfg.AiMaxTokens,
 		"silence_timeout_seconds":  60,
@@ -270,9 +270,9 @@ func setupAgent(client *http.Client, cfg *config.Config, dataDir, agentFilePath 
 	log.Printf("Successfully created agent '%s' (ID: %s) and saved to %s\n", agent.Name, agent.ID, agentFilePath)
 }
 
-func getLastFemaleVoice(voices VoicesResponse) (*Voice, error) {
+func getLastMaleVoice(voices VoicesResponse) (*Voice, error) {
 	for i := len(voices) - 1; i >= 0; i-- {
-		if voices[i].Gender == "female" {
+		if voices[i].Gender == "male" {
 			return &voices[i], nil
 		}
 	}
