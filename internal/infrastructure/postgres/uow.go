@@ -15,8 +15,13 @@ type PostgresUoW struct {
 	tx                 pgx.Tx
 	userStorage        repositories.UserStorage
 	authSessionStorage repositories.AuthSessionStorage
+	sessionStorage     repositories.SessionStorage
 
 	done bool
+}
+
+func (u *PostgresUoW) SessionStore() repositories.SessionStorage {
+	return u.sessionStorage
 }
 
 func (u *PostgresUoW) AuthSessionRepo() repositories.AuthSessionStorage {
@@ -53,5 +58,6 @@ func NewPostgresUoW(ctx context.Context, db *pgxpool.Pool) (application_ports.Un
 		tx:                 tx,
 		userStorage:        postgres_repos.NewUserStorage(sqlc.New(tx)),
 		authSessionStorage: postgres_repos.NewAuthSessionStorage(sqlc.New(tx)),
+		sessionStorage:     postgres_repos.NewSessionStore(sqlc.New(tx)),
 	}, nil
 }

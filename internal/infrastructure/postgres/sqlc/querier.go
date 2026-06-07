@@ -8,13 +8,17 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
+	CreateSession(ctx context.Context, arg CreateSessionParams) error
 	DeleteAuthSessionByID(ctx context.Context, id uuid.UUID) error
 	DeleteUserByID(ctx context.Context, id uuid.UUID) error
 	GetAuthSessionByID(ctx context.Context, id uuid.UUID) (AuthSession, error)
 	GetAuthSessionByUserID(ctx context.Context, userID uuid.UUID) ([]AuthSession, error)
+	GetSessionByID(ctx context.Context, id uuid.UUID) (Session, error)
+	GetSessionByReference(ctx context.Context, reference pgtype.Text) (Session, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	UpsertAuthSession(ctx context.Context, arg UpsertAuthSessionParams) error

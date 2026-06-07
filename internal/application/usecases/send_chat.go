@@ -3,8 +3,11 @@ package usecases
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
+	application_ports "github.com/pelDev/health-connect/internal/application/ports"
+	domain_errors "github.com/pelDev/health-connect/internal/domain/errors"
 	"github.com/pelDev/health-connect/internal/domain/models"
 	"github.com/pelDev/health-connect/internal/domain/ports"
 	"github.com/pelDev/health-connect/internal/domain/repositories"
@@ -12,28 +15,55 @@ import (
 
 type sendChatUseCase struct {
 	aiPort       ports.AIPort
+	uowFactory   func(ctx context.Context) (application_ports.UnitOfWork, error)
 	sessionStore repositories.SessionStorage
 	messageStore repositories.MessageStorage
 }
 
-func NewSendChatUseCase(aiPort ports.AIPort, sessionStore repositories.SessionStorage, messageStore repositories.MessageStorage) *sendChatUseCase {
+func NewSendChatUseCase(
+	aiPort ports.AIPort,
+	sessionStore repositories.SessionStorage,
+	uowFactory func(ctx context.Context) (application_ports.UnitOfWork, error),
+	messageStore repositories.MessageStorage,
+) *sendChatUseCase {
 	return &sendChatUseCase{
 		aiPort:       aiPort,
+		uowFactory:   uowFactory,
 		sessionStore: sessionStore,
 		messageStore: messageStore,
 	}
 }
 
 func (u *sendChatUseCase) Execute(ctx context.Context, sessionID uuid.UUID, message string, vid uuid.UUID) (*models.Message, error) {
-	session, err := u.sessionStore.GetSession(sessionID)
+	session, err := u.sessionStore.FindByID(ctx, sessionID)
 	if err != nil {
 		return nil, fmt.Errorf("ai chat failed: %w", err)
 	}
 
 	if session == nil {
-		session, err = u.sessionStore.CreateSession(sessionID, vid, nil)
+		uowInstance, err := u.uowFactory(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("ai chat failed: %w", err)
+			return nil, err
+		}
+		defer uowInstance.Rollback(ctx)
+
+		sessionStore := uowInstance.SessionStore()
+
+		session := &models.Session{
+			ID:        uuid.New(),
+			VID:       vid,
+			CreatedAt: time.Now().UTC(),
+			Reference: nil,
+			EndedAt:   nil,
+		}
+		err = sessionStore.Save(ctx, session)
+		if err != nil {
+			return nil, domain_errors.ErrDatabase(err)
+		}
+
+		err = uowInstance.Commit(ctx)
+		if err != nil {
+			return nil, domain_errors.ErrDatabase(err)
 		}
 	}
 

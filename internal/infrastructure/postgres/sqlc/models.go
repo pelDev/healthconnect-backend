@@ -5,11 +5,111 @@
 package sqlc
 
 import (
+	"database/sql/driver"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type AgentRequestTypeEnum string
+
+const (
+	AgentRequestTypeEnumReferToDoc AgentRequestTypeEnum = "refer_to_doc"
+	AgentRequestTypeEnumEmergency  AgentRequestTypeEnum = "emergency"
+)
+
+func (e *AgentRequestTypeEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AgentRequestTypeEnum(s)
+	case string:
+		*e = AgentRequestTypeEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AgentRequestTypeEnum: %T", src)
+	}
+	return nil
+}
+
+type NullAgentRequestTypeEnum struct {
+	AgentRequestTypeEnum AgentRequestTypeEnum `json:"agentRequestTypeEnum"`
+	Valid                bool                 `json:"valid"` // Valid is true if AgentRequestTypeEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAgentRequestTypeEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.AgentRequestTypeEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AgentRequestTypeEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAgentRequestTypeEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AgentRequestTypeEnum), nil
+}
+
+type DocAgentRequestLogActionEnum string
+
+const (
+	DocAgentRequestLogActionEnumDeclineRequest   DocAgentRequestLogActionEnum = "decline_request"
+	DocAgentRequestLogActionEnumAcceptRequest    DocAgentRequestLogActionEnum = "accept_request"
+	DocAgentRequestLogActionEnumSendMessage      DocAgentRequestLogActionEnum = "send_message"
+	DocAgentRequestLogActionEnumSendPrescription DocAgentRequestLogActionEnum = "send_prescription"
+	DocAgentRequestLogActionEnumViewRequest      DocAgentRequestLogActionEnum = "view_request"
+	DocAgentRequestLogActionEnumEscalate         DocAgentRequestLogActionEnum = "escalate"
+)
+
+func (e *DocAgentRequestLogActionEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = DocAgentRequestLogActionEnum(s)
+	case string:
+		*e = DocAgentRequestLogActionEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for DocAgentRequestLogActionEnum: %T", src)
+	}
+	return nil
+}
+
+type NullDocAgentRequestLogActionEnum struct {
+	DocAgentRequestLogActionEnum DocAgentRequestLogActionEnum `json:"docAgentRequestLogActionEnum"`
+	Valid                        bool                         `json:"valid"` // Valid is true if DocAgentRequestLogActionEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullDocAgentRequestLogActionEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.DocAgentRequestLogActionEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.DocAgentRequestLogActionEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullDocAgentRequestLogActionEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.DocAgentRequestLogActionEnum), nil
+}
+
+type AgentRequest struct {
+	ID          uuid.UUID            `json:"id"`
+	SessionID   uuid.UUID            `json:"sessionId"`
+	RequestType AgentRequestTypeEnum `json:"requestType"`
+	CreatedAt   pgtype.Timestamptz   `json:"createdAt"`
+	AcceptedAt  pgtype.Timestamptz   `json:"acceptedAt"`
+	AcceptedBy  pgtype.UUID          `json:"acceptedBy"`
+	Metadata    []byte               `json:"metadata"`
+}
 
 type AuthSession struct {
 	ID        uuid.UUID          `json:"id"`
@@ -18,6 +118,23 @@ type AuthSession struct {
 	ExpiresAt time.Time          `json:"expiresAt"`
 	CreatedAt time.Time          `json:"createdAt"`
 	DeletedAt pgtype.Timestamptz `json:"deletedAt"`
+}
+
+type DocAgentRequestLog struct {
+	ID        uuid.UUID                    `json:"id"`
+	RequestID uuid.UUID                    `json:"requestId"`
+	DocID     uuid.UUID                    `json:"docId"`
+	Action    DocAgentRequestLogActionEnum `json:"action"`
+	CreatedAt pgtype.Timestamptz           `json:"createdAt"`
+	Metadata  []byte                       `json:"metadata"`
+}
+
+type Session struct {
+	ID        uuid.UUID          `json:"id"`
+	Vid       uuid.UUID          `json:"vid"`
+	Reference pgtype.Text        `json:"reference"`
+	EndedAt   pgtype.Timestamptz `json:"endedAt"`
+	CreatedAt pgtype.Timestamptz `json:"createdAt"`
 }
 
 type User struct {
