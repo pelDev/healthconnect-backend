@@ -5,7 +5,7 @@ DB_HOST?=localhost
 DB_PORT?=5432
 DB_USER?=macbookpro
 DB_PASSWORD?=
-DB_NAME?=shark_event_vendor_svc
+DB_NAME?=health_connect
 DB_SSLMODE?=disable
 
 # Migration
