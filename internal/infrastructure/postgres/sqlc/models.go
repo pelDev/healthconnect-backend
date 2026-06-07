@@ -11,6 +11,15 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AuthSession struct {
+	ID        uuid.UUID          `json:"id"`
+	UserID    uuid.UUID          `json:"userId"`
+	IsRevoked pgtype.Bool        `json:"isRevoked"`
+	ExpiresAt time.Time          `json:"expiresAt"`
+	CreatedAt time.Time          `json:"createdAt"`
+	DeletedAt pgtype.Timestamptz `json:"deletedAt"`
+}
+
 type User struct {
 	ID         uuid.UUID          `json:"id"`
 	FirstName  string             `json:"firstName"`
