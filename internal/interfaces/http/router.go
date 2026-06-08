@@ -46,7 +46,7 @@ func NewRouter(
 		"http://localhost:5173": {},
 		"http://localhost:8001": {},
 		"https://healthconnect-backend-production-25ff.up.railway.app": {},
-	}))
+	})) // TODO: Move .env Variables
 
 	// -------------------
 	// Handlers
