@@ -3,6 +3,9 @@ package http_interface
 import (
 	"context"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi"
@@ -28,6 +31,9 @@ func NewRouter(
 ) http.Handler {
 	r := chi.NewRouter()
 
+	// workDir, _ := os.Getwd()
+	// filesDir := http.Dir(filepath.Join(workDir, "dist/assets"))
+
 	// -------------------
 	// Global middleware
 	// -------------------
@@ -38,6 +44,7 @@ func NewRouter(
 	r.Use(chi_middleware.Timeout(30 * time.Second))
 	r.Use(http_middleware.CORSMiddleware(map[string]struct{}{
 		"http://localhost:5173": {},
+		"http://localhost:8001": {},
 	}))
 
 	// -------------------
@@ -63,7 +70,7 @@ func NewRouter(
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	r.Route("/v1", func(r chi.Router) {
+	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/login", authHandler.Login)
 			r.Post("/logout", authHandler.Logout)
@@ -98,6 +105,23 @@ func NewRouter(
 			})
 		})
 
+	})
+
+	r.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("./dist/assets"))))
+
+	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
+		// Check if file exists in public folder
+		filePath := filepath.Join("./dist", r.URL.Path)
+		if _, err := os.Stat(filePath); err == nil {
+			http.ServeFile(w, r, filePath)
+			return
+		}
+
+		if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/v1/") {
+			http.NotFound(w, r)
+			return
+		}
+		http.ServeFile(w, r, "./dist/index.html")
 	})
 
 	return r
