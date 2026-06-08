@@ -15,9 +15,10 @@ func handleError(w http.ResponseWriter, err error) {
 			w,
 			e.GetHTTPCode(),
 			map[string]any{
-				"message": e.GetDetail(),
-				"error":   e.Error(),
-				"code":    e.GetCode(),
+				"message":  e.GetDetail(),
+				"error":    e.Error(),
+				"code":     e.GetCode(),
+				"metadata": e.GetMetadata(),
 			},
 		)
 	default:

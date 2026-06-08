@@ -59,7 +59,8 @@ func (authn *sessionMiddleware) RequireAuthSession(next http.Handler) http.Handl
 			return
 		}
 
-		session, err := authn.authSessionStorage.FindByID(r.Context(), uuid.MustParse(cookie.Value))
+		sessionID = uuid.MustParse(cookie.Value)
+		session, err := authn.authSessionStorage.FindByID(r.Context(), sessionID)
 		if err != nil || session.ExpiresAt.Before(time.Now()) {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
@@ -71,7 +72,7 @@ func (authn *sessionMiddleware) RequireAuthSession(next http.Handler) http.Handl
 }
 
 func GetSessionIDFromContext(ctx context.Context) *uuid.UUID {
-	if usr, ok := ctx.Value(vidKey).(uuid.UUID); ok {
+	if usr, ok := ctx.Value(sessionIdKey).(uuid.UUID); ok {
 		return &usr
 	}
 	return nil

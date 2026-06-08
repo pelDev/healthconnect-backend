@@ -16,8 +16,13 @@ type PostgresUoW struct {
 	userStorage        repositories.UserStorage
 	authSessionStorage repositories.AuthSessionStorage
 	sessionStorage     repositories.SessionStorage
+	agentReqStorage    repositories.AgentRequestStorage
 
 	done bool
+}
+
+func (u *PostgresUoW) AgentRequestRepo() repositories.AgentRequestStorage {
+	return u.agentReqStorage
 }
 
 func (u *PostgresUoW) SessionStore() repositories.SessionStorage {
@@ -59,5 +64,6 @@ func NewPostgresUoW(ctx context.Context, db *pgxpool.Pool) (application_ports.Un
 		userStorage:        postgres_repos.NewUserStorage(sqlc.New(tx)),
 		authSessionStorage: postgres_repos.NewAuthSessionStorage(sqlc.New(tx)),
 		sessionStorage:     postgres_repos.NewSessionStore(sqlc.New(tx)),
+		agentReqStorage:    postgres_repos.NewAgentRequestStore(sqlc.New(tx)),
 	}, nil
 }

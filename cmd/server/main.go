@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	config "github.com/pelDev/health-connect"
+	eventhandlers "github.com/pelDev/health-connect/internal/application/event_handlers"
 	application_ports "github.com/pelDev/health-connect/internal/application/ports"
 	inmem "github.com/pelDev/health-connect/internal/infrastructure/in_mem"
 	db "github.com/pelDev/health-connect/internal/infrastructure/postgres"
@@ -22,6 +23,7 @@ import (
 	sessionstore "github.com/pelDev/health-connect/internal/infrastructure/session_store"
 	"github.com/pelDev/health-connect/internal/infrastructure/voice"
 	http_interface "github.com/pelDev/health-connect/internal/interfaces/http"
+	"github.com/pelDev/health-connect/internal/interfaces/ws"
 )
 
 func main() {
@@ -32,7 +34,7 @@ func main() {
 	}
 
 	// signal context for graceful shutdown
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
 
 	// Create connection pool config
@@ -73,6 +75,7 @@ func main() {
 	authSessionStore := postgres_repos.NewAuthSessionStorage(queries)
 	userStorage := postgres_repos.NewUserStorage(queries)
 	sessionStorage := postgres_repos.NewSessionStore(queries)
+	agentRequestStorage := postgres_repos.NewAgentRequestStore(queries)
 
 	client := &http.Client{
 		Timeout: 20 * time.Second,
@@ -86,6 +89,10 @@ func main() {
 
 	inMemorySessionStore := sessionstore.NewInMemSessionStore()
 
+	// Setup Hub
+	hub := ws.NewHub()
+	go hub.Run()
+
 	eventBus := inmem.NewInMemoryBus()
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -94,6 +101,22 @@ func main() {
 			log.Printf("Error shutting down event bus: %v", err)
 		}
 	}()
+
+	eventDispatcher := eventhandlers.NewEventDispatcher()
+	eventHandlers := []eventhandlers.EventHandler{
+		eventhandlers.NewDoctorNotificationHandler(hub, agentRequestStorage),
+	}
+
+	// Register handlers
+	for _, handler := range eventHandlers {
+		eventDispatcher.Register(handler)
+	}
+
+	// Create and start consumer
+	consumer := inmem.NewEventConsumer(eventBus, eventDispatcher)
+	if err := consumer.Start(ctx); err != nil {
+		log.Fatalf("Failed to start consumer: %v", err)
+	}
 
 	// Http Router
 	router := http_interface.NewRouter(
@@ -104,6 +127,7 @@ func main() {
 		userStorage,
 		voiceAdapter,
 		eventBus,
+		hub,
 	)
 
 	server := &http.Server{
@@ -139,6 +163,18 @@ func main() {
 	// Graceful shutdown with timeout
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer shutdownCancel()
+
+	hub.Shutdown()
+
+	// Shutdown consumer first
+	if err := consumer.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Error shutting down consumer: %v", err)
+	}
+
+	// Then shutdown event bus
+	if err := eventBus.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Error shutting down event bus: %v", err)
+	}
 
 	log.Println("⏳ Stopping HTTP server gracefully...")
 	if err := server.Shutdown(shutdownCtx); err != nil {

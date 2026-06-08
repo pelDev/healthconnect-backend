@@ -12,10 +12,12 @@ import (
 )
 
 type Querier interface {
+	CreateAgentRequest(ctx context.Context, arg CreateAgentRequestParams) error
 	CreateSession(ctx context.Context, arg CreateSessionParams) error
 	DeleteAuthSessionByID(ctx context.Context, id uuid.UUID) error
 	DeleteSessionByID(ctx context.Context, id uuid.UUID) error
 	DeleteUserByID(ctx context.Context, id uuid.UUID) error
+	GetAgentRequestByID(ctx context.Context, id uuid.UUID) (AgentRequest, error)
 	GetAuthSessionByID(ctx context.Context, id uuid.UUID) (AuthSession, error)
 	GetAuthSessionByUserID(ctx context.Context, userID uuid.UUID) ([]AuthSession, error)
 	GetSessionByID(ctx context.Context, id uuid.UUID) (Session, error)

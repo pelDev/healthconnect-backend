@@ -104,6 +104,7 @@ func (handler *authHandler) Me(w http.ResponseWriter, r *http.Request) {
 
 	if session == nil {
 		handleError(w, domain_errors.ErrNotFound("session", sessionID))
+		return
 	}
 
 	user, err := handler.userStorage.FindByID(r.Context(), session.UserID)

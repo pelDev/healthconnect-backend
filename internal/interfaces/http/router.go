@@ -12,6 +12,7 @@ import (
 	"github.com/pelDev/health-connect/internal/domain/repositories"
 	"github.com/pelDev/health-connect/internal/interfaces/http/handler"
 	http_middleware "github.com/pelDev/health-connect/internal/interfaces/http/middleware"
+	"github.com/pelDev/health-connect/internal/interfaces/ws"
 )
 
 func NewRouter(
@@ -22,6 +23,7 @@ func NewRouter(
 	userStore repositories.UserStorage,
 	voiceChatAdapter application_ports.VoiceChatAdapter,
 	eventBus ports.EventBus,
+	hub *ws.Hub,
 ) http.Handler {
 	r := chi.NewRouter()
 
@@ -41,8 +43,9 @@ func NewRouter(
 	// Handlers
 	// -------------------
 	voiceHandler := handler.NewVoiceHandler(voiceChatAdapter, sessionStore, uowFactory)
-	aethexHandler := handler.NewAethexHandler(eventBus, sessionStore)
+	aethexHandler := handler.NewAethexHandler(eventBus, sessionStore, uowFactory)
 	authHandler := handler.NewAuthHandler(uowFactory, authSessionStore, userStore)
+	sseHandler := handler.NewSseHandler(hub, authSessionStore, userStore)
 
 	// -------------------
 	// Middleware
@@ -86,6 +89,10 @@ func NewRouter(
 			// r.Use(middleware.CSRFMiddleware)
 
 			r.Get("/me", authHandler.Me)
+
+			r.Route("/doc", func(r chi.Router) {
+				r.Get("/sse", sseHandler.ConnectForDocEvents)
+			})
 		})
 
 	})
