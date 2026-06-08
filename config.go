@@ -21,10 +21,6 @@ type Config struct {
 	DBMaxConnLifetime time.Duration `mapstructure:"db_max_conn_lifetime"`
 	DBMaxIdleTime     time.Duration `mapstructure:"db_max_idle_time"`
 	Port              int           `mapstructure:"port"`
-	RedisAddr         string        `mapstructure:"redis_addr"`
-	RedisPass         string        `mapstructure:"redis_pass"`
-	RedisDb           int           `mapstructure:"redis_db"`
-	EventSvcUrl       string        `mapstructure:"event_svc_url"`
 
 	AiMaxTokens int `mapstructure:"ai_max_tokens"`
 
@@ -59,6 +55,35 @@ func LoadConfig() Config {
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	// ---------------------------
+	// Bind environment variables to config keys
+	// ---------------------------
+	bindings := map[string]string{
+		"db_host":              "DB_HOST",
+		"db_port":              "DB_PORT",
+		"db_user":              "DB_USER",
+		"db_password":          "DB_PASSWORD",
+		"db_name":              "DB_NAME",
+		"db_sslmode":           "DB_SSLMODE",
+		"db_max_conns":         "DB_MAX_CONNS",
+		"db_min_conns":         "DB_MIN_CONNS",
+		"db_max_conn_lifetime": "DB_MAX_CONN_LIFETIME",
+		"db_max_idle_time":     "DB_MAX_IDLE_TIME",
+		"port":                 "PORT",
+		"ai_max_tokens":        "AI_MAX_TOKENS",
+		"gemini_api_key":       "GEMINI_API_KEY",
+		"gemini_model":         "GEMINI_MODEL",
+		"aethex_base_url":      "AETHEX_BASE_URL",
+		"aethex_api_key":       "AETHEX_API_KEY",
+		"aethex_agent_id":      "AETHEX_AGENT_ID",
+	}
+
+	for configKey, envVar := range bindings {
+		if err := v.BindEnv(configKey, envVar); err != nil {
+			log.Printf("Warning: failed to bind %s to %s: %v", configKey, envVar, err)
+		}
+	}
+
+	// ---------------------------
 	// Set defaults matching your .env
 	// ---------------------------
 	v.SetDefault("DB_HOST", "localhost")
@@ -71,7 +96,10 @@ func LoadConfig() Config {
 	v.SetDefault("DB_MIN_CONNS", 2)
 	v.SetDefault("DB_MAX_CONN_LIFETIME", "1h")
 	v.SetDefault("DB_MAX_IDLE_TIME", "30m")
-	v.SetDefault("PORT", 8081)
+	v.SetDefault("port", 8081)
+	v.SetDefault("ai_max_tokens", 4096)
+	v.SetDefault("claude_model", "claude-3-opus-20240229")
+	v.SetDefault("gemini_model", "gemini-pro")
 
 	// ---------------------------
 	// Read .env file if present
