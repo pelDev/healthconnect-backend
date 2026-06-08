@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	config "github.com/pelDev/health-connect"
+	healthconnect "github.com/pelDev/health-connect"
 	eventhandlers "github.com/pelDev/health-connect/internal/application/event_handlers"
 	application_ports "github.com/pelDev/health-connect/internal/application/ports"
 	inmem "github.com/pelDev/health-connect/internal/infrastructure/in_mem"
@@ -27,7 +27,7 @@ import (
 )
 
 func main() {
-	cfg := config.LoadConfig()
+	cfg := healthconnect.LoadConfig()
 
 	if cfg.AethexAgentId == nil {
 		log.Fatal("AethexAgentId is required but was nil")

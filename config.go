@@ -1,4 +1,4 @@
-package config
+package healthconnect
 
 import (
 	"fmt"

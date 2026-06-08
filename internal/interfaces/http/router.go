@@ -2,14 +2,14 @@ package http_interface
 
 import (
 	"context"
+	"io/fs"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/go-chi/chi"
 	chi_middleware "github.com/go-chi/chi/middleware"
+	healthconnect "github.com/pelDev/health-connect"
 	application_ports "github.com/pelDev/health-connect/internal/application/ports"
 	"github.com/pelDev/health-connect/internal/domain/ports"
 	"github.com/pelDev/health-connect/internal/domain/repositories"
@@ -108,21 +108,29 @@ func NewRouter(
 
 	})
 
-	r.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.Dir("./dist/assets"))))
+	staticFs, _ := fs.Sub(healthconnect.DistFiles, "dist/assets")
+	r.Handle("/assets/*", http.StripPrefix("/assets/", http.FileServer(http.FS(staticFs))))
+
+	rootFs, _ := fs.Sub(healthconnect.DistFiles, "dist")
 
 	r.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		// Check if file exists in public folder
-		filePath := filepath.Join("./dist", r.URL.Path)
-		if _, err := os.Stat(filePath); err == nil {
-			http.ServeFile(w, r, filePath)
-			return
-		}
-
+		// API routes — return 404 immediately
 		if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/v1/") {
 			http.NotFound(w, r)
 			return
 		}
-		http.ServeFile(w, r, "./dist/index.html")
+
+		filePath := strings.TrimPrefix(r.URL.Path, "/")
+		if filePath == "" {
+			filePath = "index.html"
+		}
+
+		// Serve file if it exists, otherwise fall back to index.html for SPA routing
+		if _, err := rootFs.Open(filePath); err != nil {
+			filePath = "index.html"
+		}
+
+		http.ServeFileFS(w, r, rootFs, filePath)
 	})
 
 	return r
