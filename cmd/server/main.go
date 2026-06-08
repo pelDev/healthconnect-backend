@@ -27,6 +27,7 @@ import (
 )
 
 func main() {
+	log.Println("Startup")
 	cfg := healthconnect.LoadConfig()
 
 	if cfg.AethexAgentId == nil {
