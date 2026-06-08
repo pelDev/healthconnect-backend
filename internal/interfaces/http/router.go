@@ -87,6 +87,10 @@ func NewRouter(
 					r.Post("/offer", voiceHandler.ExchangeOffer)
 				})
 			})
+
+			r.Route("/visitor", func(r chi.Router) {
+				r.Get("/sse", sseHandler.ConnectForVisitorEvents)
+			})
 		})
 
 		r.Route("/aethex/function", func(r chi.Router) {

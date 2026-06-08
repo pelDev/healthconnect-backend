@@ -54,7 +54,7 @@ func NewHub() *Hub {
 
 func (h *Hub) Run() {
 	go func() {
-		ticker := time.NewTicker(30 * time.Second)
+		ticker := time.NewTicker(10 * time.Second)
 		defer ticker.Stop()
 		for {
 			select {

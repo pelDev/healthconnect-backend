@@ -14,6 +14,7 @@ import (
 
 type doctorNotificationHandler struct {
 	hub            *ws.Hub
+	sessionStorage repositories.SessionStorage
 	requestStorage repositories.AgentRequestStorage
 }
 
@@ -51,6 +52,15 @@ func (d *doctorNotificationHandler) handleAgentReferDocRequestCreated(ctx contex
 		return fmt.Errorf("agent request with ID %s not found", agentRequestEvent.RequestID.String())
 	}
 
+	session, err := d.sessionStorage.FindByID(ctx, request.SessionID)
+	if err != nil {
+		return domain_errors.ErrDatabase(err)
+	}
+
+	if session == nil {
+		return fmt.Errorf("session with ID %s not found", agentRequestEvent.SessionID.String())
+	}
+
 	msgBytes, err := json.Marshal(request)
 	if err != nil {
 		return fmt.Errorf("failed to marshal request: %v\n", err)
@@ -60,6 +70,20 @@ func (d *doctorNotificationHandler) handleAgentReferDocRequestCreated(ctx contex
 		Topic:   string(event.GetEventType()),
 		Message: msgBytes,
 	}
+
+	userPayload := map[string]string{
+		"session_id": session.ID.String(),
+	}
+
+	userPayloadBytes, err := json.Marshal(userPayload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal request: %v\n", err)
+	}
+
+	d.hub.SendToUser(session.VID, ws.BroadcastMessage{
+		Topic:   string(events.DomainEventTypeReferDoctorTriggeredUser),
+		Message: userPayloadBytes,
+	})
 
 	return nil
 }
@@ -71,9 +95,14 @@ func (d *doctorNotificationHandler) SupportedEventNames() []events.DomainEventTy
 	}
 }
 
-func NewDoctorNotificationHandler(hub *ws.Hub, requestStorage repositories.AgentRequestStorage) EventHandler {
+func NewDoctorNotificationHandler(
+	hub *ws.Hub,
+	requestStorage repositories.AgentRequestStorage,
+	sessionStorage repositories.SessionStorage,
+) EventHandler {
 	return &doctorNotificationHandler{
 		requestStorage: requestStorage,
 		hub:            hub,
+		sessionStorage: sessionStorage,
 	}
 }

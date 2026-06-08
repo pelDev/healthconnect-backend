@@ -104,7 +104,7 @@ func main() {
 
 	eventDispatcher := eventhandlers.NewEventDispatcher()
 	eventHandlers := []eventhandlers.EventHandler{
-		eventhandlers.NewDoctorNotificationHandler(hub, agentRequestStorage),
+		eventhandlers.NewDoctorNotificationHandler(hub, agentRequestStorage, sessionStorage),
 	}
 
 	// Register handlers
@@ -134,9 +134,9 @@ func main() {
 	server := &http.Server{
 		Addr:         fmt.Sprintf(":%v", cfg.Port),
 		Handler:      router,
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		ReadTimeout:  0,
+		WriteTimeout: 0,
+		IdleTimeout:  0,
 		BaseContext: func(_ net.Listener) context.Context {
 			return ctx
 		},

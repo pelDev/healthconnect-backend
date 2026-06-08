@@ -9,8 +9,9 @@ import (
 type DomainEventType string
 
 const (
-	DomainEventTypeReferDoctorTriggered    DomainEventType = "refer_doctor_triggered"
-	DomainEventTypeEmergencyAlertTriggered DomainEventType = "emergency_alert_triggered"
+	DomainEventTypeReferDoctorTriggered     DomainEventType = "refer_doctor_triggered"
+	DomainEventTypeReferDoctorTriggeredUser DomainEventType = "refer_doctor_triggered_user"
+	DomainEventTypeEmergencyAlertTriggered  DomainEventType = "emergency_alert_triggered"
 )
 
 type DomainEvent interface {
