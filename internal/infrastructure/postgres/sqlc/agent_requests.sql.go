@@ -61,3 +61,39 @@ func (q *Queries) GetAgentRequestByID(ctx context.Context, id uuid.UUID) (AgentR
 	)
 	return i, err
 }
+
+const listDocAgentRequests = `-- name: ListDocAgentRequests :many
+SELECT id, session_id, request_type, created_at, accepted_at, accepted_by, metadata 
+FROM agent_requests
+WHERE 
+    accepted_at IS NULL  -- Not accepted yet
+    OR accepted_by = $1
+`
+
+func (q *Queries) ListDocAgentRequests(ctx context.Context, acceptedBy pgtype.UUID) ([]AgentRequest, error) {
+	rows, err := q.db.Query(ctx, listDocAgentRequests, acceptedBy)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []AgentRequest{}
+	for rows.Next() {
+		var i AgentRequest
+		if err := rows.Scan(
+			&i.ID,
+			&i.SessionID,
+			&i.RequestType,
+			&i.CreatedAt,
+			&i.AcceptedAt,
+			&i.AcceptedBy,
+			&i.Metadata,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

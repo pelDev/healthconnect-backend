@@ -5,6 +5,7 @@
     "eventhandlers",
     "genai",
     "inmem",
+    "PGUUID",
     "sessionstore",
     "usecase",
     "usecases"

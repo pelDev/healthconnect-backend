@@ -15,6 +15,23 @@ type agentRequestStore struct {
 	q *sqlc.Queries
 }
 
+func (a *agentRequestStore) ListDoctorRequests(ctx context.Context, docID uuid.UUID) ([]models.AgentRequest, error) {
+	rows, err := a.q.ListDocAgentRequests(ctx, toPGUUID(&docID))
+	if err != nil {
+		return nil, err
+	}
+
+	var requests []models.AgentRequest
+
+	for _, row := range rows {
+		var agentRequest models.AgentRequest
+		a.mapToDomain(row, &agentRequest)
+		requests = append(requests, agentRequest)
+	}
+
+	return requests, nil
+}
+
 func (a *agentRequestStore) Delete(ctx context.Context, id uuid.UUID) error {
 	panic("unimplemented")
 }

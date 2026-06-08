@@ -31,6 +31,10 @@ func NewSseHandler(
 }
 
 func (h *SseHandler) ConnectForDocEvents(w http.ResponseWriter, r *http.Request) {
+	rc := http.NewResponseController(w)
+	rc.SetWriteDeadline(time.Time{})
+	rc.SetReadDeadline(time.Time{})
+
 	sessionId := http_middleware.GetSessionIDFromContext(r.Context())
 	if sessionId == nil {
 		handleError(w, domain_errors.ErrNotFound("session", "context"))
@@ -90,8 +94,6 @@ func (h *SseHandler) ConnectForDocEvents(w http.ResponseWriter, r *http.Request)
 		fmt.Println("Client unregistered:", client.DeviceID)
 	}()
 
-	rc := http.NewResponseController(w)
-
 	fmt.Fprintf(w, ": connection established\n\n")
 	rc.Flush()
 
@@ -101,7 +103,7 @@ func (h *SseHandler) ConnectForDocEvents(w http.ResponseWriter, r *http.Request)
 			// Hub is shutting down - send shutdown message
 			fmt.Println("Hub shutdown detected for device:", client.DeviceID)
 			shutdownMsg := fmt.Sprintf("event: %s\ndata: %s\n\n", "shutdown", `{"reason":"server shutdown"}`)
-			fmt.Fprintf(w, shutdownMsg, shutdownMsg)
+			fmt.Fprintf(w, shutdownMsg)
 			rc.Flush()
 
 			// Give client a moment to process and close
@@ -127,6 +129,7 @@ func (h *SseHandler) ConnectForDocEvents(w http.ResponseWriter, r *http.Request)
 
 		// Send heart beat
 		case msg := <-heartbeatCh:
+			fmt.Println("Send heartbeat")
 			_, err := fmt.Fprintf(w, "data: %s\n\n", msg)
 			if err != nil {
 				fmt.Println("Error writing heartbeat to sse", client.DeviceID, err)

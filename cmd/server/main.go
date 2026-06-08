@@ -125,6 +125,7 @@ func main() {
 		inMemorySessionStore,
 		authSessionStore,
 		userStorage,
+		agentRequestStorage,
 		voiceAdapter,
 		eventBus,
 		hub,

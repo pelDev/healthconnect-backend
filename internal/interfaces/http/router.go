@@ -21,6 +21,7 @@ func NewRouter(
 	messageStore repositories.MessageStorage,
 	authSessionStore repositories.AuthSessionStorage,
 	userStore repositories.UserStorage,
+	agentRequestsStorage repositories.AgentRequestStorage,
 	voiceChatAdapter application_ports.VoiceChatAdapter,
 	eventBus ports.EventBus,
 	hub *ws.Hub,
@@ -46,6 +47,7 @@ func NewRouter(
 	aethexHandler := handler.NewAethexHandler(eventBus, sessionStore, uowFactory)
 	authHandler := handler.NewAuthHandler(uowFactory, authSessionStore, userStore)
 	sseHandler := handler.NewSseHandler(hub, authSessionStore, userStore)
+	agentRequestHandler := handler.NewAgentRequestsHandler(authSessionStore, agentRequestsStorage, userStore)
 
 	// -------------------
 	// Middleware
@@ -92,6 +94,7 @@ func NewRouter(
 
 			r.Route("/doc", func(r chi.Router) {
 				r.Get("/sse", sseHandler.ConnectForDocEvents)
+				r.Get("/requests", agentRequestHandler.ListDoctorRequests)
 			})
 		})
 

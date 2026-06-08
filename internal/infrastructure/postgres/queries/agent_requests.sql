@@ -7,3 +7,10 @@ INSERT INTO agent_requests (
 
 -- name: GetAgentRequestByID :one
 SELECT * FROM agent_requests WHERE id = $1;
+
+-- name: ListDocAgentRequests :many
+SELECT * 
+FROM agent_requests
+WHERE 
+    accepted_at IS NULL  -- Not accepted yet
+    OR accepted_by = $1;

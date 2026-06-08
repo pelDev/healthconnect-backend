@@ -24,6 +24,7 @@ type Querier interface {
 	GetSessionByReference(ctx context.Context, reference pgtype.Text) (Session, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
+	ListDocAgentRequests(ctx context.Context, acceptedBy pgtype.UUID) ([]AgentRequest, error)
 	UpsertAuthSession(ctx context.Context, arg UpsertAuthSessionParams) error
 	UpsertUser(ctx context.Context, arg UpsertUserParams) error
 }

@@ -41,10 +41,7 @@ func (usecase *referToDoctorUseCase) Execute(ctx context.Context, sessionReferen
 	}
 
 	metadata := map[string]any{
-		"data": map[string]string{
-			"summary":  data.Summary,
-			"symptoms": data.Symptoms,
-		},
+		"data": data,
 	}
 
 	metadataBytes, _ := json.Marshal(metadata)

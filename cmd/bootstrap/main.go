@@ -59,7 +59,7 @@ type CreateAgentToolReq struct {
 }
 
 var CreateFuncRequests = []CreateAgentToolReq{
-	CreateAgentToolReq{
+	{
 		Name: "trigger_emergency_alert",
 		Description: `Call this immediately when the user mentions any life-threatening condition:
 chest pain, difficulty breathing, severe bleeding, stroke symptoms (face drooping,
@@ -70,12 +70,49 @@ Do not ask follow-up questions first. Call this before saying anything else.`,
 		Headers:          map[string]string{},
 		ToolType:         "function",
 	},
-	CreateAgentToolReq{
+	{
 		Name: "refer_to_doctor",
-		Description: `Call this when the user has symptoms that may require medication or a prescription.
-First gather symptoms through natural follow-up questions, one at a time.
-Once you have a complete picture and the user confirms, call this function.
-Do not suggest any medication or dosage yourself.`,
+		Description: `Call this when the user has symptoms that may require medical attention or a prescription.
+
+Before calling, gather the following through natural, conversational follow-up questions — ask one at a time,
+never as a list. Only ask what hasn't already been mentioned. Once you have a reasonably complete picture
+and the user confirms, call this function. Do not suggest any medication or dosage yourself.
+
+Information to collect:
+
+PATIENT BASICS
+- Age and biological sex (affects dosing, risk profiles, and differential diagnoses)
+- Weight (optional, but useful for dosing context)
+- Pregnancy status (if applicable)
+
+CHIEF COMPLAINT
+- Primary symptom in the patient's own words
+- Which part of the body is affected
+
+SYMPTOM DETAILS
+- Onset: when did it start? Was it sudden or gradual?
+- Duration: how long has it been going on?
+- Character: how would they describe it? (e.g. sharp, dull, burning, throbbing, constant, intermittent)
+- Severity: on a scale of 1–10, or mild/moderate/severe
+- Progression: getting better, worse, or staying the same?
+- Location and radiation: does it stay in one place or spread elsewhere?
+- Aggravating factors: what makes it worse? (movement, food, stress, time of day, etc.)
+- Relieving factors: what makes it better? (rest, position, OTC meds, etc.)
+
+ASSOCIATED SYMPTOMS
+- Any fever, chills, nausea, vomiting, fatigue, or other symptoms alongside the main complaint
+
+RELEVANT HISTORY
+- Any known medical conditions (diabetes, hypertension, asthma, etc.)
+- Current medications (prescription, OTC, or supplements)
+- Known allergies, especially drug allergies
+- Similar episodes in the past and how they were treated
+- Recent travel, sick contacts, or unusual exposures (if relevant)
+- Relevant family history (e.g. heart disease, cancer, if applicable)
+
+CONTEXT
+- Has the patient seen a doctor for this before? What was the outcome?
+- Have they tried anything already? Did it help?`,
 		ParametersSchema: map[string]any{
 			"type": "object",
 			"properties": map[string]any{
@@ -87,8 +124,40 @@ Do not suggest any medication or dosage yourself.`,
 					"type":        "string",
 					"description": "a short plain-English description of the case",
 				},
+				"age": map[string]string{
+					"type":        "string",
+					"description": "Patient's age",
+				},
+				"sex": map[string]string{
+					"type":        "string",
+					"description": "Patient's biological sex",
+				},
+				"onset": map[string]string{
+					"type":        "string",
+					"description": "When and how symptoms started (e.g. 'sudden onset 2 days ago')",
+				},
+				"duration": map[string]string{
+					"type":        "string",
+					"description": "How long the symptoms have been present",
+				},
+				"severity": map[string]string{
+					"type":        "string",
+					"description": "Severity of the primary symptom (e.g. '7/10', 'moderate')",
+				},
+				"medical_history": map[string]string{
+					"type":        "string",
+					"description": "Known conditions, past episodes, and relevant family history",
+				},
+				"current_medications": map[string]string{
+					"type":        "string",
+					"description": "Medications, supplements, or OTC drugs the patient is currently taking",
+				},
+				"allergies": map[string]string{
+					"type":        "string",
+					"description": "Known allergies, especially to medications",
+				},
 			},
-			"required": []string{"symptoms", "summary"},
+			"required": []string{"symptoms", "summary", "age", "sex", "onset"},
 		},
 		EndpointURL: "https://097e-154-113-67-70.ngrok-free.app/v1/aethex/function/refer_to_doctor",
 		Headers:     map[string]string{},
