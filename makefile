@@ -1,5 +1,11 @@
 .PHONY: migrate-create migrate-up migrate-down migrate-status sqlc-generate
 
+# Load .env file if it exists
+ifneq (,$(wildcard .env))
+    include .env
+    export
+endif
+
 # Database
 DB_HOST?=localhost
 DB_PORT?=5432
