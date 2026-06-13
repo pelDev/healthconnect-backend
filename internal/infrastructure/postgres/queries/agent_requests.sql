@@ -14,4 +14,4 @@ FROM agent_requests
 WHERE 
     accepted_at IS NULL  -- Not accepted yet
     OR accepted_by = $1
-    ORDER BY accepted_at DESC;
+    ORDER BY created_at DESC;
